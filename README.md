@@ -6,7 +6,7 @@
 - 🏷️ 自动分类与结果结构化展示
 
 ## 项目截图
-![系统主界面]
+![系统主界面](https://github.com/user-attachments/assets/8277cda0-ef12-47b3-89df-f6c005d52c99)
 ![识别结果示例]
 
 ## 技术栈
