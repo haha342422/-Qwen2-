@@ -1,0 +1,908 @@
+{% raw %}
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>公文内容智能识别与分类系统</title>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.08);
+      --border:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.62);
+      --accent:#5b8cff;
+      --good:#2dd4bf;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, "Microsoft YaHei", Arial;
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(91,140,255,.20), transparent 50%),
+                  radial-gradient(900px 700px at 80% 10%, rgba(45,212,191,.18), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+    a{color:var(--accent); text-decoration:none}
+    .wrap{max-width:1200px; margin:0 auto; padding:28px 18px 60px}
+    .top{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    }
+    .title h1{margin:0 0 8px; font-size:34px; letter-spacing:.5px}
+    .subtitle{color:var(--muted); line-height:1.4}
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px; border-radius:999px;
+      background:var(--card); border:1px solid var(--border);
+      box-shadow: var(--shadow);
+      white-space:nowrap;
+    }
+    .dot{width:10px; height:10px; border-radius:50%; background:var(--good)}
+    .grid{
+      display:grid;
+      grid-template-columns: 380px 1fr;
+      gap:16px;
+      margin-top:18px;
+      align-items:start;
+    }
+    .card{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding:16px;
+    }
+    .card h3{margin:0 0 12px; font-size:18px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .muted{color:var(--muted)}
+    .err{color:var(--bad); margin-top:10px; white-space:pre-wrap}
+    .ok{color:var(--good)}
+    .input, select{
+      padding:10px 12px; border-radius:14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      outline:none;
+    }
+    .btn{
+      border:0;
+      background: linear-gradient(135deg, rgba(91,140,255,1), rgba(45,212,191,.85));
+      color:white;
+      padding:10px 14px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:800;
+      box-shadow: 0 10px 24px rgba(91,140,255,.18);
+    }
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+    .btn2{
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.03);
+      color:var(--text);
+      padding:10px 14px;
+      border-radius:14px;
+      cursor:pointer;
+    }
+    .tags{display:flex; gap:8px; flex-wrap:wrap}
+    .tag{
+      padding:6px 10px; border-radius:999px;
+      background:rgba(91,140,255,.15);
+      border:1px solid rgba(91,140,255,.25);
+      font-size:13px;
+    }
+    .tag2{
+      padding:6px 10px; border-radius:999px;
+      background:rgba(45,212,191,.12);
+      border:1px solid rgba(45,212,191,.22);
+      font-size:13px;
+    }
+    .leftPanel{
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      height: calc(100vh - 32px);
+      overflow: auto;
+      padding-right: 6px;
+    }
+    .leftPanel::-webkit-scrollbar{ width: 8px; }
+    .leftPanel::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.12); border-radius: 8px; }
+
+    .rightPanel{
+      align-self: start;
+      min-height: 520px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+    .rightPanel::-webkit-scrollbar{ width: 10px; }
+    .rightPanel::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.12); border-radius: 10px; }
+
+    .infoBox{
+      padding:12px;
+      border-radius:16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .kpiRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .kpi{
+      padding:12px;
+      border-radius:16px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .kpi .num{ font-size:18px; font-weight:900; margin-top:6px; }
+    .kpi .lab{ color: var(--muted); font-size:12px; }
+
+    /* 进度条 */
+    .stepWrap{ margin-top:12px; }
+    .steps{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+    }
+    .step{
+      flex:1;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      display:flex; align-items:center; gap:10px;
+      min-height:44px;
+    }
+    .step .sDot{
+      width:10px; height:10px; border-radius:50%;
+      background: rgba(255,255,255,.25);
+    }
+    .step.active{
+      border-color: rgba(91,140,255,.35);
+      background: rgba(91,140,255,.10);
+    }
+    .step.active .sDot{ background: var(--accent); }
+    .step.done{
+      border-color: rgba(45,212,191,.35);
+      background: rgba(45,212,191,.10);
+    }
+    .step.done .sDot{ background: var(--good); }
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      margin-top:10px;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(91,140,255,1), rgba(45,212,191,.85));
+      transition: width .35s ease;
+    }
+    .statusLine{
+      margin-top:8px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* 折叠面板 */
+    .panel{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      overflow:hidden;
+      margin-top:12px;
+      background: rgba(255,255,255,.03);
+    }
+    .panelHead{
+      padding:12px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .panelHead:hover{ background: rgba(255,255,255,.04); }
+    .panelTitle{
+      display:flex; gap:10px; align-items:center;
+      font-weight:900;
+    }
+    .chev{
+      width:10px; height:10px;
+      border-right:2px solid rgba(255,255,255,.65);
+      border-bottom:2px solid rgba(255,255,255,.65);
+      transform: rotate(45deg);
+      transition: transform .18s ease;
+    }
+    .chev.open{ transform: rotate(225deg); }
+    .panelBody{
+      padding:12px 14px 14px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .pre{
+      white-space:pre-wrap;
+      line-height:1.55;
+      font-size:14px;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:12px;
+      max-height:320px;
+      overflow:auto;
+    }
+    .imgbox{
+      display:grid; grid-template-columns: 1fr 1fr; gap:12px;
+      margin-top:10px;
+    }
+    .img{
+      width:100%; border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.02);
+      min-height:160px;
+      object-fit:contain;
+    }
+
+    .table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0 10px;
+      font-size:14px;
+    }
+    .table tr{ background:rgba(255,255,255,.03); }
+    .table td{
+      padding:10px 12px;
+      border-top:1px solid rgba(255,255,255,.06);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .table td:first-child{
+      border-left:1px solid rgba(255,255,255,.06);
+      border-radius:12px 0 0 12px;
+      color:var(--muted);
+      width:140px;
+    }
+    .table td:last-child{
+      border-right:1px solid rgba(255,255,255,.06);
+      border-radius:0 12px 12px 0;
+    }
+
+    .history{ margin-top:16px; }
+    .listItem{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;
+      margin-top:10px;
+    }
+    .liTitle{font-weight:900}
+    .liMeta{color:var(--muted); font-size:13px}
+    .miniBtns{display:flex; gap:8px; flex-wrap:wrap}
+
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+      .imgbox{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap" id="app">
+  <div class="top">
+    <div class="title">
+      <h1>公文内容智能识别与分类系统</h1>
+      <div class="subtitle">
+        OCR：PaddleOCR(PP-OCRv4) ｜ 版面：版头/主体/版记 ｜ 分割线：HoughLinesP ｜ 印章：红章检测+单独OCR ｜ 分类摘要：Qwen2（不可用则规则兜底）
+      </div>
+    </div>
+    <div class="badge">
+      <span class="dot"></span>
+      <div>系统运行中（<span class="muted">本机 [[ host ]]</span>）</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- 左侧：控制台 -->
+    <div class="card leftPanel">
+      <h3>上传与识别</h3>
+
+      <div class="infoBox" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div style="font-weight:900">系统控制台</div>
+          <span class="tag2">在线</span>
+        </div>
+        <div class="muted" style="margin-top:6px;line-height:1.5">
+          本机：[[ host ]]<br/>
+          结果区：右侧可滚动 ｜ 控制区：左侧吸顶
+        </div>
+
+        <div class="kpiRow">
+          <div class="kpi">
+            <div class="lab">最近 DocID</div>
+            <div class="num">[[ result ? result.doc_id : '—' ]]</div>
+          </div>
+          <div class="kpi">
+            <div class="lab">印章候选</div>
+            <div class="num">[[ (result && result.seals) ? result.seals.count : '—' ]]</div>
+          </div>
+          <div class="kpi">
+            <div class="lab">密级</div>
+            <div class="num">[[ safeLevel ]]</div>
+          </div>
+          <div class="kpi">
+            <div class="lab">主题数</div>
+            <div class="num">[[ safeCats.length ]]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 上传 -->
+      <div class="row">
+        <input class="input" type="file" ref="fileInput" @change="onPick" />
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn" :disabled="loading || !picked" @click="run">开始识别</button>
+        <button class="btn2" :disabled="loading" @click="clear">清空结果</button>
+      </div>
+
+      <!-- 进度条/状态 -->
+      <div class="stepWrap">
+        <div class="steps">
+          <div class="step" :class="stepClass(0)">
+            <span class="sDot"></span>
+            <div style="font-weight:800">上传</div>
+          </div>
+          <div class="step" :class="stepClass(1)">
+            <span class="sDot"></span>
+            <div style="font-weight:800">识别中</div>
+          </div>
+          <div class="step" :class="stepClass(2)">
+            <span class="sDot"></span>
+            <div style="font-weight:800">入库完成</div>
+          </div>
+        </div>
+
+        <div class="bar">
+          <div :style="{ width: progress + '%' }"></div>
+        </div>
+        <div class="statusLine">
+          <div>状态：[[ statusText ]]</div>
+          <div>[[ progress ]]%</div>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        支持：png/jpg/jpeg、pdf、docx。识别后不会跳转 JSON，结果直接在右侧展示。
+      </div>
+
+      <div style="height:12px"></div>
+      <div class="hr"></div>
+
+      <!-- 批量 -->
+      <h3>批量上传</h3>
+      <div class="row">
+        <input class="input" type="file" multiple ref="multiInput" @change="onPickMulti"/>
+        <button class="btn2" :disabled="loading || !pickedMulti" @click="runBatch">批量处理</button>
+      </div>
+
+      <div v-if="err" class="err">请求异常：[[ err ]]</div>
+      <div v-if="okMsg" class="ok" style="margin-top:10px">[[ okMsg ]]</div>
+    </div>
+
+    <!-- 右侧：结果区（折叠面板） -->
+    <div class="card rightPanel">
+      <h3>本次任务概览</h3>
+
+      <div v-if="!result" class="muted">
+        还没有识别结果。左侧选择文件后点击“开始识别”。
+      </div>
+
+      <div v-if="result">
+        <div class="row" style="justify-content:space-between">
+          <div class="tags">
+            <span class="tag2">DocID：[[ result.doc_id ]]</span>
+            <span class="tag2">类型：[[ result.file_type ]]</span>
+            <span class="tag2">文件：[[ result.filename ]]</span>
+          </div>
+          <div class="tags">
+            <span class="tag">涉密：[[ safeLevel ]]</span>
+            <span class="tag" v-for="c in safeCats" :key="c">[[ c ]]</span>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- 折叠：关键信息 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('key')">
+            <div class="panelTitle">
+              <span class="tag2">KeyInfo</span> 关键信息
+            </div>
+            <div class="chev" :class="{open: open.key}"></div>
+          </div>
+          <div class="panelBody" v-show="open.key">
+            <table class="table">
+              <tr v-for="(v,k) in (result.key_info || {})" :key="k">
+                <td>[[ k ]]</td>
+                <td>[[ v === null ? '—' : v ]]</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- 折叠：印章 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('seal')">
+            <div class="panelTitle">
+              <span class="tag2">Seal</span> 印章识别（候选 [[ (result.seals && result.seals.count) ? result.seals.count : 0 ]]）
+            </div>
+            <div class="chev" :class="{open: open.seal}"></div>
+          </div>
+          <div class="panelBody" v-show="open.seal">
+            <div class="imgbox" v-if="sealHasImage">
+              <div>
+                <div class="muted" style="margin-bottom:6px">预览（画框）</div>
+                <img class="img" v-if="sealPreviewUrl" :src="sealPreviewUrl" />
+                <div v-else class="pre muted">无</div>
+              </div>
+              <div>
+                <div class="muted" style="margin-bottom:6px">最佳裁剪</div>
+                <img class="img" v-if="sealBestUrl" :src="sealBestUrl" />
+                <div v-else class="pre muted">无</div>
+              </div>
+            </div>
+
+            <div class="muted" style="margin-top:10px">印章 OCR 文本（纠错优先）</div>
+            <div class="pre" style="margin-top:10px">[[ sealText ]]</div>
+            <div class="muted" style="margin-top:10px">纠错说明：[[ sealExplain ]]</div>
+          </div>
+        </div>
+
+        <!-- 折叠：摘要 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('sum')">
+            <div class="panelTitle">
+              <span class="tag2">Summary</span> 自动摘要
+            </div>
+            <div class="chev" :class="{open: open.sum}"></div>
+          </div>
+          <div class="panelBody" v-show="open.sum">
+            <div class="pre">[[ result.summary || '—' ]]</div>
+          </div>
+        </div>
+
+        <!-- 折叠：版面 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('layout')">
+            <div class="panelTitle">
+              <span class="tag2">Layout</span> 版面分析（版头/主体/版记）
+            </div>
+            <div class="chev" :class="{open: open.layout}"></div>
+          </div>
+          <div class="panelBody" v-show="open.layout">
+            <div class="muted">版头</div>
+            <div class="pre" style="margin-top:8px">[[ layoutText('版头') ]]</div>
+            <div class="muted" style="margin-top:12px">主体</div>
+            <div class="pre" style="margin-top:8px">[[ layoutText('主体') ]]</div>
+            <div class="muted" style="margin-top:12px">版记</div>
+            <div class="pre" style="margin-top:8px">[[ layoutText('版记') ]]</div>
+          </div>
+        </div>
+
+        <!-- 折叠：OCR全文 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('ocr')">
+            <div class="panelTitle">
+              <span class="tag2">OCR</span> OCR 文本
+            </div>
+            <div class="chev" :class="{open: open.ocr}"></div>
+          </div>
+          <div class="panelBody" v-show="open.ocr">
+            <div class="row">
+              <button class="btn2" @click="copy(result.ocr_text)">复制</button>
+              <a class="btn2" v-if="result.upload_url" :href="result.upload_url" target="_blank">打开原文件</a>
+            </div>
+            <div class="pre" style="margin-top:10px">[[ result.ocr_text || '' ]]</div>
+          </div>
+        </div>
+
+        <!-- 折叠：CRUD编辑 -->
+        <div class="panel">
+          <div class="panelHead" @click="toggle('crud')">
+            <div class="panelTitle">
+              <span class="tag2">CRUD</span> 编辑与管理
+            </div>
+            <div class="chev" :class="{open: open.crud}"></div>
+          </div>
+          <div class="panelBody" v-show="open.crud">
+            <div class="row">
+              <input class="input" v-model="edit.title" placeholder="标题（可修改）" style="flex:1"/>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <input class="input" v-model="edit.level" placeholder="密级（公开/内部/秘密/机密）" style="width:240px"/>
+              <input class="input" v-model="edit.categories" placeholder="分类（逗号分隔，如：政务,科技）" style="flex:1"/>
+            </div>
+            <div class="row" style="margin-top:10px">
+              <button class="btn2" @click="saveEdit">保存修改</button>
+              <button class="btn2" @click="remove(result.doc_id)" style="border-color:rgba(251,113,133,.6);color:#ffd2da">删除该文档</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 历史 -->
+  <div class="card history">
+    <h3>历史记录与检索</h3>
+    <div class="row">
+      <input class="input" v-model="q.keyword" placeholder="关键词 keyword" style="flex:1"/>
+      <input class="input" v-model="q.category" placeholder="分类 category（如：政务）" style="width:220px"/>
+      <input class="input" v-model="q.level" placeholder="密级 level（如：秘密）" style="width:220px"/>
+      <button class="btn2" @click="loadHistory(1)">检索</button>
+      <button class="btn2" @click="resetQuery">重置</button>
+    </div>
+
+    <div class="muted" style="margin-top:10px">
+      当前页：[[ history.page ]] ｜ 共 [[ history.total ]] 条
+    </div>
+
+    <div v-for="d in history.items" :key="d.id" class="listItem">
+      <div>
+        <div class="liTitle">[[ d.title || '（无标题）' ]]</div>
+        <div class="liMeta">
+          DocID [[ d.id ]] ｜ [[ d.level || '未知' ]] ｜ [[ (d.categories || []).join('、') ]] ｜ [[ d.issue_date || '' ]]
+        </div>
+      </div>
+      <div class="miniBtns">
+        <button class="btn2" @click="openDoc(d.id)">查看</button>
+        <button class="btn2" @click="remove(d.id)" style="border-color:rgba(251,113,133,.6);color:#ffd2da">删除</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px; justify-content:space-between">
+      <button class="btn2" :disabled="history.page<=1" @click="loadHistory(history.page-1)">上一页</button>
+      <button class="btn2" :disabled="history.page>=history.pages" @click="loadHistory(history.page+1)">下一页</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+const app = createApp({
+  data(){
+    return {
+      host: location.host,
+      picked: null,
+      pickedMulti: null,
+      loading: false,
+      err: "",
+      okMsg: "",
+      result: null,
+      edit: { title:"", level:"", categories:"" },
+
+      q: { keyword:"", category:"", level:"" },
+      history: { page:1, pages:1, total:0, items:[] },
+
+      // 进度/状态
+      status: "idle", // idle|uploading|processing|done|error
+      progress: 0,
+
+      // 折叠状态
+      open: { key:true, seal:true, sum:true, layout:false, ocr:false, crud:false }
+    }
+  },
+  computed:{
+    safeLevel(){
+      const r = this.result;
+      if(!r || !r.classification) return "未知";
+      return r.classification.level || "未知";
+    },
+    safeCats(){
+      const r = this.result;
+      if(!r || !r.classification || !Array.isArray(r.classification.categories)) return [];
+      return r.classification.categories;
+    },
+    sealPreviewUrl(){
+      const s = this.result && this.result.seals ? this.result.seals : null;
+      return s && s.preview_url ? s.preview_url : "";
+    },
+    sealBestUrl(){
+      const s = this.result && this.result.seals ? this.result.seals : null;
+      return s && s.best_crop_url ? s.best_crop_url : "";
+    },
+    sealHasImage(){
+      return !!(this.sealPreviewUrl || this.sealBestUrl);
+    },
+    sealText(){
+      if(!this.result || !this.result.seals) return "无";
+      const refine = this.result.seals.seal_refine && this.result.seals.seal_refine.seal_text_refined
+        ? this.result.seals.seal_refine.seal_text_refined : "";
+      const raw = this.result.seals.seal_text ? this.result.seals.seal_text : "";
+      const t = (refine || raw || "无").trim();
+      return t || "无";
+    },
+    sealExplain(){
+      if(!this.result || !this.result.seals || !this.result.seals.seal_refine) return "—";
+      return this.result.seals.seal_refine.explain || "—";
+    },
+    statusText(){
+      if(this.status==="idle") return "待命";
+      if(this.status==="uploading") return "上传中…";
+      if(this.status==="processing") return "识别中…（OCR/抽取/模型/入库）";
+      if(this.status==="done") return "已入库完成";
+      if(this.status==="error") return "失败";
+      return "—";
+    }
+  },
+  mounted(){
+    this.loadHistory(1);
+  },
+  methods:{
+    toggle(k){
+      this.open[k] = !this.open[k];
+    },
+    layoutText(key){
+      const r = this.result;
+      if(!r || !r.layout) return "";
+      return r.layout[key] || "";
+    },
+    stepClass(idx){
+      // 0 上传 1 识别 2 入库
+      const p = this.progress;
+      if(idx===0){
+        if(p>=35) return "done";
+        if(this.status==="uploading" || this.status==="processing" || this.status==="done") return "active";
+        return "";
+      }
+      if(idx===1){
+        if(p>=80) return "done";
+        if(this.status==="processing") return "active";
+        return "";
+      }
+      if(idx===2){
+        if(this.status==="done" && p>=100) return "done";
+        if(this.status==="done") return "active";
+        return "";
+      }
+      return "";
+    },
+    onPick(e){
+      this.picked = (e.target.files && e.target.files[0]) ? e.target.files[0] : null;
+      this.okMsg = "";
+      this.err = "";
+    },
+    onPickMulti(e){
+      this.pickedMulti = e.target.files ? e.target.files : null;
+      this.okMsg = "";
+      this.err = "";
+    },
+    setProgress(status, percent){
+      this.status = status;
+      this.progress = Math.max(0, Math.min(100, percent));
+    },
+    async run(){
+      if(!this.picked) return;
+
+      this.loading = true;
+      this.err = "";
+      this.okMsg = "";
+
+      try{
+        this.setProgress("uploading", 10);
+
+        const fd = new FormData();
+        fd.append("file", this.picked);
+
+        // 上传阶段
+        this.setProgress("uploading", 30);
+
+        // 识别阶段（后端在处理，我们用“前端模拟进度”给用户体验）
+        const t1 = setTimeout(()=>this.setProgress("processing", 45), 250);
+        const t2 = setTimeout(()=>this.setProgress("processing", 62), 800);
+        const t3 = setTimeout(()=>this.setProgress("processing", 78), 1400);
+
+        const resp = await fetch("/api/upload", { method:"POST", body: fd });
+        let data = null;
+        try{
+          data = await resp.json();
+        }catch(e){
+          clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);
+          throw new Error("后端没有返回 JSON（可能报错或被拦截）");
+        }
+
+        clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);
+
+        if(!resp.ok || data.error){
+          this.setProgress("error", 100);
+          throw new Error(data.detail || data.error || ("HTTP " + resp.status));
+        }
+
+        this.setProgress("processing", 88);
+
+        this.result = data;
+        this.edit.title = (data.key_info && data.key_info["标题"]) ? data.key_info["标题"] : "";
+        this.edit.level = data.classification ? (data.classification.level || "") : "";
+        this.edit.categories = data.classification && Array.isArray(data.classification.categories)
+          ? data.classification.categories.join(",") : "";
+
+        // 入库完成
+        this.setProgress("done", 100);
+
+        this.okMsg = "✅ 识别完成，结果已入库（DocID " + data.doc_id + "）";
+        this.loadHistory(1);
+
+      }catch(e){
+        this.err = e.message || String(e);
+        this.status = "error";
+      }finally{
+        this.loading = false;
+        // 过一会儿把进度条回到待命（更自然）
+        setTimeout(()=>{
+          if(this.status==="done") this.setProgress("idle", 0);
+        }, 1200);
+      }
+    },
+    async runBatch(){
+      if(!this.pickedMulti || this.pickedMulti.length===0) return;
+      this.loading = true;
+      this.err = "";
+      this.okMsg = "";
+
+      try{
+        this.setProgress("uploading", 15);
+
+        const fd = new FormData();
+        for(const f of this.pickedMulti){
+          fd.append("files", f);
+        }
+
+        this.setProgress("processing", 45);
+        const resp = await fetch("/api/batch_upload", { method:"POST", body: fd });
+        const data = await resp.json();
+        if(!resp.ok || data.error){
+          this.setProgress("error", 100);
+          throw new Error(data.detail || data.error || ("HTTP " + resp.status));
+        }
+
+        this.setProgress("done", 100);
+        this.okMsg = "✅ 批量完成，共处理 " + data.count + " 个文件";
+        this.loadHistory(1);
+
+      }catch(e){
+        this.err = e.message || String(e);
+        this.status = "error";
+      }finally{
+        this.loading = false;
+        setTimeout(()=>{
+          if(this.status==="done") this.setProgress("idle", 0);
+        }, 1200);
+      }
+    },
+    clear(){
+      this.result = null;
+      this.err = "";
+      this.okMsg = "";
+      this.edit = { title:"", level:"", categories:"" };
+      if(this.$refs.fileInput) this.$refs.fileInput.value = "";
+      this.setProgress("idle", 0);
+    },
+    async copy(text){
+      try{
+        await navigator.clipboard.writeText(text || "");
+        this.okMsg = "✅ 已复制到剪贴板";
+        setTimeout(()=>this.okMsg="", 1200);
+      }catch(e){
+        this.err = "复制失败：" + (e.message || e);
+      }
+    },
+    async loadHistory(page){
+      const params = new URLSearchParams();
+      params.set("page", page);
+      params.set("page_size", 8);
+      if(this.q.keyword) params.set("keyword", this.q.keyword);
+      if(this.q.category) params.set("category", this.q.category);
+      if(this.q.level) params.set("level", this.q.level);
+
+      const resp = await fetch("/api/documents?" + params.toString());
+      const data = await resp.json();
+
+      this.history.page = data.page || 1;
+      this.history.pages = data.pages || 1;
+      this.history.total = data.total || 0;
+      this.history.items = data.items || [];
+    },
+    resetQuery(){
+      this.q = { keyword:"", category:"", level:"" };
+      this.loadHistory(1);
+    },
+    async openDoc(id){
+      const resp = await fetch("/api/document/" + id);
+      const data = await resp.json();
+      if(data.error){
+        this.err = data.error;
+        return;
+      }
+      this.result = {
+        doc_id: data.id,
+        file_type: data.file_type || "",
+        filename: data.file_name || "",
+        upload_url: data.upload_url || "",
+        ocr_text: data.content || "",
+        key_info: data.key_info || {},
+        classification: {
+          categories: data.categories || [],
+          level: data.level || "",
+          explain: data.explain || "",
+        },
+        summary: data.summary || "",
+        layout: data.layout || {},
+        seals: data.seals || {count:0,candidates:[],preview_url:"",best_crop_url:"",seal_text:"",seal_refine:{}},
+      };
+
+      this.edit.title = (this.result.key_info && this.result.key_info["标题"]) ? this.result.key_info["标题"] : (data.title || "");
+      this.edit.level = this.result.classification.level || "";
+      this.edit.categories = (this.result.classification.categories || []).join(",");
+      this.okMsg = "✅ 已打开 DocID " + id;
+    },
+    async remove(id){
+      if(!confirm("确定删除 DocID " + id + " 吗？")) return;
+      const resp = await fetch("/api/document/" + id, { method:"DELETE" });
+      const data = await resp.json();
+      if(data.error){
+        this.err = data.error;
+        return;
+      }
+      this.okMsg = "✅ 删除成功";
+      if(this.result && this.result.doc_id === id){
+        this.result = null;
+      }
+      this.loadHistory(1);
+    },
+    async saveEdit(){
+      if(!this.result) return;
+      const id = this.result.doc_id;
+
+      const payload = {
+        title: this.edit.title,
+        level: this.edit.level,
+        categories: (this.edit.categories || "").split(",").map(x=>x.trim()).filter(Boolean),
+      };
+
+      const resp = await fetch("/api/document/" + id, {
+        method:"PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if(!resp.ok || data.error){
+        this.err = data.error || ("HTTP " + resp.status);
+        return;
+      }
+      this.okMsg = "✅ 修改已保存";
+      this.loadHistory(1);
+    }
+  }
+});
+
+// ✅ Vue 使用 [[ ]] 作为插值符
+app.config.compilerOptions.delimiters = ['[[', ']]'];
+app.mount("#app");
+</script>
+</body>
+</html>
+{% endraw %}

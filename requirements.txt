@@ -1,0 +1,8 @@
+flask
+paddleocr
+paddlepaddle
+opencv-python
+numpy<2.0
+python-docx
+pdf2image
+sqlalchemy
