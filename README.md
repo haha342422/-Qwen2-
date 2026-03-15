@@ -7,7 +7,7 @@
 
 ## 项目截图
 ![系统主界面](https://github.com/user-attachments/assets/8277cda0-ef12-47b3-89df-f6c005d52c99)
-![识别结果示例]
+![识别结果示例](https://github.com/user-attachments/assets/75ab7fd5-ad3b-4165-8b4d-21ca7b891948)
 
 ## 技术栈
 - 前端：HTML/CSS/JavaScript
